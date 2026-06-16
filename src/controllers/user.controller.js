@@ -4,6 +4,7 @@ import {User} from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/apiResponse.js";
 import {jwt} from "jsonwebtoken"
+import mongoose,{isValidObjectId} from "mongoose";
 const generateAccessAndRefreshToken = async (userId) => {
     try {
         const existedUser = await User.findById(userId)
@@ -16,6 +17,25 @@ const generateAccessAndRefreshToken = async (userId) => {
         return {accessToken, refreshToken}
     } catch (error) {
         throw new ApiError(400,"Something went Wrong while generating tokens")
+    }
+}
+
+const deleteOldFileFromCloudinary = async (url) => {
+    if(url == ""){
+        throw new ApiError(401,"URL is not corect! ")
+    }
+
+   // Get filename after last '/'
+    let part = url.split('/').pop();
+
+    // Remove file extension
+    part = part.substring(0, part.lastIndexOf('.'));
+
+    const result = await cloudinary.uploader.destroy(part);
+    if(result.result === "ok"){
+        console.log("Image deleted successfully!")
+    } else {
+        console.log("Image not found!")
     }
 }
 // --------------- Controllers ----------------------
@@ -228,6 +248,187 @@ const changeCurrentPassword = asyncHandler(async (req,res) => {
         "password changed successfully"
     )
    )
+})
+
+const updateUserDetails = asyncHandler(async (req, res) => {
+    const {fullName, bio, dateOfBirth, email } = req.body
+
+    if(
+        [fullName, dateOfBirth, email].some((field) => field?.trim() === "")
+    ){
+        throw new ApiError(400," these files required")
+    }
+
+    if(!email.includes("@")){
+        throw new ApiError(400, "enter valid email")
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {
+                email,
+                fullName
+            }
+        },
+        {returnDocument: "after"}
+    ).select("-password -refreshToken")
+
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user,
+            "Details updated successfully"
+        )
+    )
+
+})
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+    const avatarLocalPath = req.file?.avatar[0].path
+
+    if(!avatarLocalPath){
+        throw new ApiError(400, "new avatar file is required")
+    }
+    const oldVatar = req.user.avatar
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+
+    if(!avatar.url){
+        throw new ApiError(400,"Error while uploading avatar file to cloudinary")
+    }
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            avatar: avatar.url
+        },
+        {returnDocument: "after"}
+    ).select("-password -refreshToken")
+
+    deleteOldFileFromCloudinary(oldVatar) 
+
+    return res
+    .json(
+        new ApiResponse(
+            200,
+            user,
+            "avatar updated successfully!"
+        )
+    )
+})
+
+const coverImage = asyncHandler(async (req, res) => {
+    const coverImageLocalPath = req.file?.coverImage[0].path
+
+    if(!coverImageLocalPath){
+        throw new ApiError(400, "new avatar file is required")
+    }
+    const oldCoverImage = req.user.avatar
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
+    if(!coverImage.url){
+        throw new ApiError(400,"Error while uploading coverImage file to cloudinary")
+    }
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            coverImage: coverImage.url
+        },
+        {returnDocument: "after"}
+    ).select("-password -refreshToken")
+
+    deleteOldFileFromCloudinary(oldCoverImage) 
+
+    return res
+    .json(
+        new ApiResponse(
+            200,
+            user,
+            "avatar updated successfully!"
+        )
+    )
+})
+
+const getUserProfile = asyncHandler(async (req, res) => {
+   const {username} = req.params;
+
+    if(!username.trim()){
+        throw new ApiError(401," This username does not exist")
+    }
+    const userProfile = await User.aggregate([
+        {
+            $match: username.toLowerCase()
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "following",
+                as: "followers"
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "follower",
+                as: "followTo"
+            }
+        },
+        {
+            $lookup: {
+                from: "tweets",
+                localField: "_id",
+                foreignField: "owner",
+                as: "totalTweets"
+            }
+        },
+        {
+            $addFields: {
+                followerCount: {
+                    $size: "$followers"
+                },
+                folowToCount: {
+                    $size: "$followTo"
+                },
+                totalTweets: {
+                   $size: "totalTweets" 
+                },
+                isSubscribed: {
+                    $cond: {
+                        if: {$in: [req.user?._id, "$subscribers.subscriber"]},
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                username: 1,
+                fullName: 1,
+                followerCount: 1,
+                folowToCount: 1,
+                avatar: 1,
+                coverImage: 1,
+                totalTweets: 1
+            }
+        }
+    ])
+
+    if(!userProfile?.length){
+        throw new ApiError(400,"this user does not exist")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            userProfile,
+            "user profile fetched successfully!"
+        )
+    )
 })
 
 
