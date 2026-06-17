@@ -3,8 +3,9 @@ import { ApiError } from "../utils/apiError.js"
 import {User} from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/apiResponse.js";
-import {jwt} from "jsonwebtoken"
+import  jwt  from "jsonwebtoken"
 import mongoose,{isValidObjectId} from "mongoose";
+import cloudinary from "cloudinary"
 const generateAccessAndRefreshToken = async (userId) => {
     try {
         const existedUser = await User.findById(userId)
@@ -186,12 +187,12 @@ const refreshAccessToken = asyncHandler(async (req,res) => {
         const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
 
         
-        const user = await User.findById({_id: decodedToken._id}).select("-password -refreshToken")
+        const user = await User.findById({_id: decodedToken._id})
 
         if(!user){
             throw new ApiError(401,"Invalid refresh Token")
         }
-
+        
         if(incomingRefreshToken !== user?.refreshToken){
             throw new ApiError(401,"refreh token is expired or used")
         }
@@ -201,7 +202,7 @@ const refreshAccessToken = asyncHandler(async (req,res) => {
             secure: true
         }
     
-        const {accessToken, newRefreshToken} = await generateAccessAndRefreshtoken(user._id)
+        const {accessToken, newRefreshToken} = await generateAccessAndRefreshToken(user._id)
         return res
         .status(200)
         .cookie("accessToken", accessToken, options)
@@ -228,8 +229,6 @@ const changeCurrentPassword = asyncHandler(async (req,res) => {
         throw new ApiError(400, "Both passwords are required")
     }
    const user = await User.findById(req.user._id)
-   console.log("old password",oldPassword)
-   console.log("new password",newPassword)
    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
    console.log(isPasswordCorrect)
    if(!isPasswordCorrect){
@@ -268,7 +267,9 @@ const updateUserDetails = asyncHandler(async (req, res) => {
         {
             $set: {
                 email,
-                fullName
+                fullName,
+                bio: bio || "",
+                dateOfBirth
             }
         },
         {returnDocument: "after"}
@@ -286,7 +287,7 @@ const updateUserDetails = asyncHandler(async (req, res) => {
 })
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-    const avatarLocalPath = req.file?.avatar[0].path
+    const avatarLocalPath = req.file.path
 
     if(!avatarLocalPath){
         throw new ApiError(400, "new avatar file is required")
@@ -317,8 +318,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     )
 })
 
-const coverImage = asyncHandler(async (req, res) => {
-    const coverImageLocalPath = req.file?.coverImage[0].path
+const updateCoverImage = asyncHandler(async (req, res) => {
+    const coverImageLocalPath = req.file?.path
 
     if(!coverImageLocalPath){
         throw new ApiError(400, "new avatar file is required")
@@ -357,7 +358,9 @@ const getUserProfile = asyncHandler(async (req, res) => {
     }
     const userProfile = await User.aggregate([
         {
-            $match: username.toLowerCase()
+            $match: {
+                username: username?.toLowerCase()
+            }
         },
         {
             $lookup: {
@@ -380,7 +383,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
                 from: "tweets",
                 localField: "_id",
                 foreignField: "owner",
-                as: "totalTweets"
+                as: "tweets"
             }
         },
         {
@@ -388,15 +391,20 @@ const getUserProfile = asyncHandler(async (req, res) => {
                 followerCount: {
                     $size: "$followers"
                 },
-                folowToCount: {
+                followToCount: {
                     $size: "$followTo"
                 },
                 totalTweets: {
-                   $size: "totalTweets" 
+                    $size: "$tweets"
                 },
-                isSubscribed: {
+                isFollowed: {
                     $cond: {
-                        if: {$in: [req.user?._id, "$subscribers.subscriber"]},
+                        if: {
+                            $in: [
+                                new mongoose.Types.ObjectId(req.user._id),
+                                "$followers.follower"
+                            ]
+                        },
                         then: true,
                         else: false
                     }
@@ -407,14 +415,15 @@ const getUserProfile = asyncHandler(async (req, res) => {
             $project: {
                 username: 1,
                 fullName: 1,
-                followerCount: 1,
-                folowToCount: 1,
                 avatar: 1,
                 coverImage: 1,
-                totalTweets: 1
+                followerCount: 1,
+                followToCount: 1,
+                totalTweets: 1,
+                isFollowed: 1
             }
         }
-    ])
+]);
 
     if(!userProfile?.length){
         throw new ApiError(400,"this user does not exist")
@@ -432,4 +441,14 @@ const getUserProfile = asyncHandler(async (req, res) => {
 })
 
 
-export {registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword}
+export {
+    registerUser, 
+    loginUser, 
+    logoutUser, 
+    refreshAccessToken, 
+    changeCurrentPassword,
+    updateUserDetails,
+    updateUserAvatar,
+    updateCoverImage,
+    getUserProfile
+}
