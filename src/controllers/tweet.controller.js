@@ -3,7 +3,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { Tweet } from "../models/tweet.model.js";
 import {ApiResponse} from "../utils/apiResponse.js"
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 
 const uploadTweet = asyncHandler(async (req, res) => {
     const {content} = req.body
@@ -93,4 +93,93 @@ const getAllTweets = asyncHandler(async (req, res) => {
      )
 })
 
-export {uploadTweet, getAllTweets}
+const updateTweet = asyncHandler(async (req, res) => {
+    const {tweetId} = req.params
+    const {content} = req.body
+    if(!isValidObjectId(tweetId)){
+        throw new ApiError(400, "Invalid object id")
+    }
+    const existedTweet = await Tweet.findById(tweetId)
+
+    if(!existedTweet){
+        throw new ApiError(400,"tweet does not exist")
+    }
+
+    if(req.user._id.toString() !== existedTweet.owner.toString()){
+        throw new ApiError(400, "you are un authorize to update this tweet")
+    }
+
+    const tweet = await Tweet.findByIdAndUpdate(
+        existedTweet._id,
+        {
+            $set: {content : content}
+        },
+        {"returnDocument": "after"}
+    )
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            tweet,
+            "tweet updated successfully!"
+        )
+    )
+})
+
+const getTweetById = asyncHandler(async (req,res) => {
+    const {tweetId} = req.params
+
+    if(!isValidObjectId(tweetId)){
+        throw new ApiError(400, "Invalid oject id")
+    }
+    const tweet = await Tweet.findById(tweetId)
+
+    if(!tweet){
+        throw new ApiError(400, "tweet does not exist!")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            tweet,
+            "tweet fetched successfully!"
+        )
+    )
+})
+
+const deleteTweet = asyncHandler(async (req, res) =>{
+    const {tweetId} = req.params
+    if(!isValidObjectId(tweetId)){
+        throw new ApiError(400, "invalid object id")
+    }
+    const existedTweet = await Tweet.findById(tweetId)
+    if(!existedTweet){
+        throw new ApiError(400, "tweet already deleted")
+    }
+
+    if(req.user._id.toString() !== existedTweet.owner ){
+        throw new ApiError(400, "you are un un authorize to delete this tweet")
+    }
+
+    const deletedTweet = await Tweet.deleteOne({_id: existedTweet._id})
+
+    if(!deleteTweet){
+        throw new ApiError(401, "tweeet is not deleted")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {},
+            "tweet deleted successfully!"
+        )
+    )
+})
+
+export {uploadTweet, getAllTweets, updateTweet, deleteTweet}
