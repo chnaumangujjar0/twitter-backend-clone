@@ -5,6 +5,8 @@ import { getLikedTweet, toogleCommentLike, toogleTweetLike } from "../controller
 const router = Router();
 router.use(verifyJwt)
 
-router.route("/toggle-tweet-like/:tweetId", toogleTweetLike)
-router.route("/toggle-comment-like/:commentId", toogleCommentLike)
-router.route("/get-liked-tweets", getLikedTweet)
+router.route("/toggle-tweet-like/:tweetId").post(toogleTweetLike)
+router.route("/toggle-comment-like/:commentId").post(toogleCommentLike)
+router.route("/get-liked-tweets").get(getLikedTweet)
+
+export default router

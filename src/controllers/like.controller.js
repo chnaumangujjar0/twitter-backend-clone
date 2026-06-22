@@ -1,7 +1,6 @@
 import { isValidObjectId } from "mongoose";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
-import {Tweet} from "../models/tweet.model.js"
 import { ApiResponse } from "../utils/apiResponse.js";
 import { Like } from "../models/like.model.js";
 
@@ -12,13 +11,13 @@ const toogleTweetLike = asyncHandler(async (req, res) => {
         throw new ApiError(400,"invalid objectid")
     }
 
-    const existingLike = await Tweet.find({
+    const existingLike = await Like.find({
         tweet: tweetId,
         likedBy: req.user._id
     })
 
     if(existingLike){
-        await Tweet.deleteOne(
+        await Like.deleteOne(
             {
                 _id: existingLike._id,
             }
@@ -62,7 +61,7 @@ const toogleCommentLike = asyncHandler(async (req, res) => {
         throw new ApiError(400,"invalid objectid")
     }
 
-    const existingLike = await Tweet.find({
+    const existingLike = await Like.find({
         tweet: commentId,
         likedBy: req.user._id
     })
