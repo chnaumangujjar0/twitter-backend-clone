@@ -12,9 +12,18 @@ const tweetSchema = new Schema(
             }
         ],
         owner: {
-            type: mongoose.Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: "User"
-        }
+        },
+        isRetweet: {
+        type: Boolean,
+        default: false,
+        },
+        retweetOf: {
+        type: Schema.Types.ObjectId,
+        ref: "Tweet",   // points to the original tweet
+        default: null,
+    },
     },
     {
         timestamps: true

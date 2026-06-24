@@ -10,7 +10,7 @@ const toggleSubscription = asyncHandler(async (req, res) =>{
         throw new ApiError(400, "Invalid object id")
     }
     const existingSubscription = await Subscription.findOne({
-        subscriber: req.user._id,
+        follower: req.user._id,
         following: userId
     })
 
@@ -32,11 +32,11 @@ const toggleSubscription = asyncHandler(async (req, res) =>{
     
     const subscribe = await Subscription.create(
         {
-            subscriber:  req.user._id ,
+            follower:  req.user._id ,
             following: userId
         }
     )
-    if(!subcribe){
+    if(!subscribe){
         throw new ApiError(401, " channel is not subscribed")
     }
     
@@ -85,9 +85,8 @@ const getUserFollower = asyncHandler(async (req, res) => {
             $unwind: "$followerInfo" // it convert the array data into object
         },
     ])
-    
     if(!followers){
-        throw new ApiError(400,"user has no follower")
+       throw new ApiError(400, "follower does not fetchedd sucessfully")
     }
 
     return res
@@ -96,7 +95,7 @@ const getUserFollower = asyncHandler(async (req, res) => {
         new ApiResponse(
             200,
             followers,
-            "followers fetched successfully!"
+            !followers.length  ? "user has no follower" : "follwer fetched successfully"
         )
     )
 

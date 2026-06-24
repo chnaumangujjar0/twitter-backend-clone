@@ -6,48 +6,49 @@ import {ApiResponse} from "../utils/apiResponse.js"
 import mongoose, { isValidObjectId } from "mongoose";
 
 const uploadTweet = asyncHandler(async (req, res) => {
-    const {content} = req.body
+    const { content } = req.body;
 
-    if(!content){
-        throw new ApiError(400, "title is required")
+    if (!content) {
+        throw new ApiError(400, "Content is required");
     }
-    //console.log(req.files);
-    const paths = req.files.map((file) => file.path)
-    console.log(paths)
+    console.log(req.files)
+    const paths = req.files?.map(file => file.path) || [];
 
-    if(paths.length > 4){
-        throw new ApiError(400,"maximum 4 files can be upload")
+    if (paths.length > 4) {
+        throw new ApiError(400, "Maximum 4 files can be uploaded");
     }
 
-    const mediaFiles = await Promise.all(
-        paths.map(path => uploadOnCloudinary(path))
-    );
-    if(!mediaFiles){
-        throw new ApiError(401, "error un uploading file")
+    let mediaFiles = [];
+    let url = [];
+
+    if (paths.length > 0) {
+        mediaFiles = await Promise.all(
+            paths.map(path => uploadOnCloudinary(path))
+        );
+
+        url = mediaFiles.map(file => file.url);
     }
-    const url = mediaFiles.map((file) => file.url)
-    console.log(mediaFiles)
+
     const tweet = await Tweet.create({
         content,
         mediaFile: url,
         owner: req.user._id
-    })
+    });
 
-    const existedTweet = await Tweet.findById({_id: tweet._id})
+    const existedTweet = await Tweet.findById(tweet._id);
 
-    if(!existedTweet){
-        throw new ApiError(401,"tweet is not uploaded")
+    if (!existedTweet) {
+        throw new ApiError(401, "Tweet was not uploaded");
     }
-
 
     return res.status(200).json(
         new ApiResponse(
             200,
-            tweet,
-            "hello"
+            existedTweet,
+            "Tweet uploaded successfully!"
         )
-    )
-})
+    );
+});
 
 const getAllTweets = asyncHandler(async (req, res) => {
     const {userId} = req.query
@@ -161,7 +162,7 @@ const deleteTweet = asyncHandler(async (req, res) =>{
         throw new ApiError(400, "tweet already deleted")
     }
 
-    if(req.user._id.toString() !== existedTweet.owner ){
+    if(req.user._id.toString() !== existedTweet.owner.toString() ){
         throw new ApiError(400, "you are un un authorize to delete this tweet")
     }
 
@@ -182,4 +183,43 @@ const deleteTweet = asyncHandler(async (req, res) =>{
     )
 })
 
-export {uploadTweet, getAllTweets, updateTweet, deleteTweet}
+const retweet = asyncHandler( async (req,res) => {
+    const {tweetId} = req.params
+    const {content} = req.body
+
+    if(!isValidObjectId(tweetId)){
+        throw new ApiError(400,"Invalid object id")
+    }
+    if(!content){
+        throw new ApiError(400,"content is required")
+    }
+    const existingRetweet = await Tweet.find(
+        {
+            owner: req.user._id,
+            retweetOf: tweetId
+        }
+    )
+
+    if(!existingRetweet){
+        throw new ApiError(400, "ypu alread retweeted this tweet")
+    }
+
+    const retweet = await Tweet.create({
+        content,
+        retweetOf: tweetId,
+        owner: req.user._id,
+        isRetweet: true
+    })
+
+    if(!retweet){
+        throw new ApiError(401, " tweet is not retweeted")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,retweet,"tweet retweeted successfully!")
+    )
+})
+
+export {uploadTweet, getAllTweets, updateTweet, getTweetById, deleteTweet, retweet}

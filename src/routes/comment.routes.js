@@ -5,7 +5,9 @@ const router = Router()
 
 router.use(verifyJwt)
 
-router.route("/upload-comment").post(addComment)
+router.route("/upload-comment/:tweetId").post(addComment)
 router.route("/update-comment/:commentId").patch(updateComment)
-router.route("/delete-comment").post(deleteComment)
+router.route("/delete-comment/:commentId").delete(deleteComment)
 router.route("/get-tweet-comments/:tweetId").get(getTweetComments)
+
+export default router

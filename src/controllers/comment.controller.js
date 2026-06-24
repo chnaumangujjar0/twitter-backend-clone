@@ -57,8 +57,7 @@ const deleteComment = asyncHandler( async (req,res) =>{
     return res
     .status(200)
     .json(
-        200,
-        new ApiResponse(200,{},"coment deleted Successfully!")
+        new ApiResponse(200,{},"comment deleted Successfully!")
     )
 })
 
@@ -79,19 +78,21 @@ const updateComment = asyncHandler( async (req,res) => {
     if(!existingComment){
         throw new ApiError(400, "comment not found")
     }
+    if(existingComment.content == content){
+        throw new ApiError(400,"new content is required")
+    }
 
     if(req.user._id.toString() !== existingComment.owner.toString()){
         throw new ApiError(400, "you are un authorize to update this comment")
     }
-
-    const comment = await Tweet.findByIdAndUpdate(
+    const comment = await Comment.findByIdAndUpdate(
         existingComment._id,
         {
             $set: {content : content}
         },
         {"returnDocument": "after"}
     )
-
+    
     if(!comment){
         throw new ApiError(401,"comment is not updated")
     }
@@ -99,9 +100,11 @@ const updateComment = asyncHandler( async (req,res) => {
     return res
     .status(200)
     .json(
-        200,
-        comment,
-        "comment updated successfully!"
+        new ApiResponse(
+            200,
+            comment,
+            "comment updated successfully!"
+        )
     )
 })
 

@@ -15,13 +15,8 @@ const toogleTweetLike = asyncHandler(async (req, res) => {
         tweet: tweetId,
         likedBy: req.user._id
     })
-
-    if(existingLike){
-        await Like.deleteOne(
-            {
-                _id: existingLike._id,
-            }
-        )
+    if(existingLike.length){
+        await Like.findByIdAndDelete(existingLike[0]._id)
 
         return res
         .status(200)
@@ -29,7 +24,7 @@ const toogleTweetLike = asyncHandler(async (req, res) => {
             new ApiResponse(
                 200,
                 {},
-                "comment unliked succesfully!"
+                "tweet unliked succesfully!"
             )
         )
     }
@@ -49,7 +44,7 @@ const toogleTweetLike = asyncHandler(async (req, res) => {
         new ApiResponse(
             200,
             like,
-            "video liked successfully!"
+            "tweet liked successfully!"
         )
     )
 })
@@ -62,16 +57,12 @@ const toogleCommentLike = asyncHandler(async (req, res) => {
     }
 
     const existingLike = await Like.find({
-        tweet: commentId,
+        comment: commentId,
         likedBy: req.user._id
     })
 
-    if(existingLike){
-        await Tweet.deleteOne(
-            {
-                _id: existingLike._id,
-            }
-        )
+    if(existingLike.length){
+        await Like.findByIdAndDelete(existingLike[0]._id)
 
         return res
         .status(200)
@@ -85,7 +76,7 @@ const toogleCommentLike = asyncHandler(async (req, res) => {
     }
 
     const like = await Like.create({
-        tweet: commentId,
+        comment: commentId,
         likedBy: req.user._id,
     })
 

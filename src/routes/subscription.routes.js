@@ -7,7 +7,7 @@ const router = Router()
 router.use(verifyJwt)
 
 router.route("/toggle-Subscription/:userId").post(toggleSubscription)
-router.route("/followers/:userid").get(getUserFollower)
-router.route("/follwing/:userid").get(getUserFollowing)
+router.route("/followers/:userId").get(getUserFollower)
+router.route("/following/:userId").get(getUserFollowing)
 
 export default router
