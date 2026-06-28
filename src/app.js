@@ -11,7 +11,12 @@ app.use(express.json({limit : "16kb"}));
 app.use(express.urlencoded({extended : true, limit : "16kb"}))
 app.use(express.static("public"))
 app.use(cookieParser())
+import path from "path"
 
+// Serve test file
+app.get("/test", (req, res) => {
+  res.sendFile(path.resolve("test-socket.html"))
+})
 // routes import 
 import healthcheckRouter from "./routes/healthcheck.routes.js"
 import userRouter from "./routes/user.routes.js"

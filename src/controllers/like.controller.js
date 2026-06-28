@@ -3,30 +3,33 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { Like } from "../models/like.model.js";
+import { Tweet } from "../models/tweet.model.js";
 
 const toogleTweetLike = asyncHandler(async (req, res) => {
-    const {tweetId} = req.params
+    const { tweetId } = req.params
 
-    if(!isValidObjectId(tweetId)){
-        throw new ApiError(400,"invalid objectid")
+    if (!isValidObjectId(tweetId)) {
+        throw new ApiError(400, "Invalid tweet id")
     }
 
-    const existingLike = await Like.find({
+    const existingLike = await Like.findOne({
         tweet: tweetId,
         likedBy: req.user._id
     })
-    if(existingLike.length){
-        await Like.findByIdAndDelete(existingLike[0]._id)
+
+    if (existingLike) {
+        await Like.findByIdAndDelete(existingLike._id)
 
         return res
-        .status(200)
-        .json(
-            new ApiResponse(
-                200,
-                {},
-                "tweet unliked succesfully!"
-            )
-        )
+            .status(200)
+            .json(new ApiResponse(200, {}, "Tweet unliked successfully!"))
+    }
+
+    // Get the tweet to find its owner
+    const tweet = await Tweet.findById(tweetId)
+
+    if (!tweet) {
+        throw new ApiError(404, "Tweet not found")
     }
 
     const like = await Like.create({
@@ -34,19 +37,19 @@ const toogleTweetLike = asyncHandler(async (req, res) => {
         likedBy: req.user._id,
     })
 
-    if(!like){
-        throw new ApiError(400,"tweet does not liked successfully!")
+    
+    if (tweet.owner.toString() !== req.user._id.toString()) {
+        const io = req.app.get("io")
+        io.to(tweet.owner.toString()).emit("notification", {
+            type: "like",
+            message: `${req.user.username} liked your tweet`,
+            tweetId: tweetId,
+        })
     }
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(
-            200,
-            like,
-            "tweet liked successfully!"
-        )
-    )
+        .status(200)
+        .json(new ApiResponse(200, like, "Tweet liked successfully!"))
 })
 
 const toogleCommentLike = asyncHandler(async (req, res) => {

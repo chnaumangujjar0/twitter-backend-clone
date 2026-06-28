@@ -10,7 +10,11 @@ const addComment = asyncHandler(async (req,res) => {
     if(!isValidObjectId(tweetId)){
         throw new ApiError(400, "invalid object id")
     }
+    const tweet = await Tweet.findById(tweetId)
 
+    if(!tweet){
+        throw new ApiError(400, "tweet not found for comment")
+    }
     if(!content){
         throw new ApiError(400, "content is required")
     }
@@ -24,7 +28,16 @@ const addComment = asyncHandler(async (req,res) => {
     if(!comment){
         throw new ApiError(401, " comment is not posted")
     }
-
+    console.log(tweet.owner)
+    if (tweet.owner.toString() !== req.user._id.toString()) {
+        console.log("i am here")
+    const io = req.app.get("io")
+    io.to(tweet.owner.toString()).emit("notification", {
+        type: "comment",
+        message: `${req.user.username} comment on your tweet`,
+        tweetId: tweetId,
+    })
+}
     return res
     .status(200)
     .json(

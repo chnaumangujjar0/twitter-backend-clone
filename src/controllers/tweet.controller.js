@@ -214,7 +214,15 @@ const retweet = asyncHandler( async (req,res) => {
     if(!retweet){
         throw new ApiError(401, " tweet is not retweeted")
     }
-
+    const originalTweet = await Tweet.findById(tweetId)
+    if (originalTweet.owner.toString() !== req.user._id.toString()) {
+    const io = req.app.get("io")
+    io.to(originalTweet.owner.toString()).emit("notification", {
+        type: "retweet",
+        message: `${req.user.username} retweeted your tweet`,
+        tweetId: originalTweet._id,
+    })
+}
     return res
     .status(200)
     .json(
