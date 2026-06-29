@@ -3,6 +3,8 @@ import {Subscription} from "../models/subscription.model.js"
 import mongoose, { isValidObjectId } from "mongoose"
 import {ApiError} from "../utils/apiError.js"
 import {ApiResponse} from "../utils/apiResponse.js"
+import sendNotification from "../utils/sendNotification.js"
+
 const toggleSubscription = asyncHandler(async (req, res) =>{
     const {userId} = req.params
 
@@ -40,14 +42,14 @@ const toggleSubscription = asyncHandler(async (req, res) =>{
         throw new ApiError(401, " channel is not subscribed")
     }
 
-    if (subscribe.following.toString() !== req.user._id.toString()) {
-        const io = req.app.get("io")
-        io.to(subscribe.following.toString()).emit("notification", {
-            type: "follow",
-            message: `${req.user.username} followed your`,
-            userId: req.user._id
-        })
-    }
+    const io = req.app.get("io")
+    await sendNotification(io, {
+        recipient: channelId,   // person being followed
+        sender: req.user._id,
+        type: "follow",
+        tweet: null,            // no tweet for follow notifications
+        message: `${req.user.username} started following you`,
+})
     return res.status(200).json(
         new ApiResponse(
             200,

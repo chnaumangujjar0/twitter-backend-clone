@@ -4,7 +4,7 @@ import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { Like } from "../models/like.model.js";
 import { Tweet } from "../models/tweet.model.js";
-
+import sendNotification from "../utils/sendNotification.js"
 const toogleTweetLike = asyncHandler(async (req, res) => {
     const { tweetId } = req.params
 
@@ -37,15 +37,15 @@ const toogleTweetLike = asyncHandler(async (req, res) => {
         likedBy: req.user._id,
     })
 
-    
-    if (tweet.owner.toString() !== req.user._id.toString()) {
-        const io = req.app.get("io")
-        io.to(tweet.owner.toString()).emit("notification", {
-            type: "like",
-            message: `${req.user.username} liked your tweet`,
-            tweetId: tweetId,
-        })
-    }
+    const io = req.app.get("io")
+    await sendNotification(io, {
+        recipient: tweet.owner,
+        sender: req.user._id,
+        type: "like",
+        tweet: tweetId,
+        message: `${req.user.username} liked your tweet`,
+    })
+
 
     return res
         .status(200)

@@ -28,16 +28,15 @@ const addComment = asyncHandler(async (req,res) => {
     if(!comment){
         throw new ApiError(401, " comment is not posted")
     }
-    console.log(tweet.owner)
-    if (tweet.owner.toString() !== req.user._id.toString()) {
-        console.log("i am here")
+    
     const io = req.app.get("io")
-    io.to(tweet.owner.toString()).emit("notification", {
+    await sendNotification(io, {
+        recipient: tweet.owner,
+        sender: req.user._id,
         type: "comment",
-        message: `${req.user.username} comment on your tweet`,
-        tweetId: tweetId,
+        tweet: tweetId,
+        message: `${req.user.username} replied to your tweet`,
     })
-}
     return res
     .status(200)
     .json(
