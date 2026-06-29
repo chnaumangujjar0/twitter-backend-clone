@@ -6,11 +6,11 @@ import {
     getUnreadCount,
     deleteNotification,
 } from "../controllers/notification.controller.js"
-import { verifyJWT } from "../middlewares/auth.middleware.js"
+import { verifyJwt } from "../middlewares/auth.middleware.js"
 
 const router = Router()
 
-router.use(verifyJWT) 
+router.use(verifyJwt) 
 
 router.get("/",              getNotifications)
 router.get("/unread-count",  getUnreadCount)

@@ -16,6 +16,7 @@ const io = new Server(httpServer, {
     origin: process.env.CORS_ORIGIN,
     credentials: false,
   },
+  connectionStateRecovery: {}
 })
 
 app.set("io", io)

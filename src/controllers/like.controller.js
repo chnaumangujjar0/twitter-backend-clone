@@ -5,6 +5,9 @@ import { ApiResponse } from "../utils/apiResponse.js";
 import { Like } from "../models/like.model.js";
 import { Tweet } from "../models/tweet.model.js";
 import sendNotification from "../utils/sendNotification.js"
+import { Comment } from "../models/comment.model.js";
+
+
 const toogleTweetLike = asyncHandler(async (req, res) => {
     const { tweetId } = req.params
 
@@ -77,7 +80,7 @@ const toogleCommentLike = asyncHandler(async (req, res) => {
             )
         )
     }
-
+    const comment = await Comment.findById(commentId)
     const like = await Like.create({
         comment: commentId,
         likedBy: req.user._id,
@@ -87,6 +90,14 @@ const toogleCommentLike = asyncHandler(async (req, res) => {
         throw new ApiError(400,"comment is not liked successfully!")
     }
 
+    const io = req.app.get("io")
+    await sendNotification(io, {
+        recipient: comment.owner,
+        sender: req.user._id,
+        type: "like",
+        tweet: null,
+        message: `${req.user.username} liked your comment`,
+    })
     return res
     .status(200)
     .json(

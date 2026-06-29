@@ -34,4 +34,9 @@ const notificationSchema = new Schema(
     { timestamps: true }
 )
 
+notificationSchema.index(
+    { recipient: 1, sender: 1, type: 1, tweet: 1 },
+    { unique: true }
+)
+
 export const Notification = mongoose.model("Notification", notificationSchema)
