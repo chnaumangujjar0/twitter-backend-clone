@@ -14,7 +14,7 @@ const httpServer = createServer(app)
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.CORS_ORIGIN,
-    credentials: false,
+    credentials: true,
   },
   connectionStateRecovery: {}
 })
@@ -27,7 +27,7 @@ io.on("connection", (socket) => {
   socket.on("join", (userId) => {
     socket.join(userId)
     console.log(`User ${userId} joined their room`)
-
+    socket.userId = userId
     socket.broadcast.emit("userOnline", { userId })
         console.log(`User ${userId} is online`)
 
