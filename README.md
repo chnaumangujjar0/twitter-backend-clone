@@ -307,7 +307,6 @@ Access Granted
 
 ## 🚀 Future Improvements
 
-- Real-time Notifications using Socket.io
 - Tweet Replies
 - Retweets / Reposts
 - Hashtags
